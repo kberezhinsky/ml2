@@ -1,0 +1,129 @@
+---
+title: "Course project"
+author: "K. Berezhinskiy"
+date: "27/03/2016."
+output: html_document
+---
+
+Hello! Let's load some libraries!
+
+```{r results='hide',warning=FALSE, message=FALSE}
+library(caret)
+library (dplyr)
+library(ggplot2)
+```
+
+Now set up working directory, and load source files.
+
+```{r}
+setwd("C:/r/ML")
+Train = read.csv("pml-training.csv")
+Test<-read.csv("pml-testing.csv")
+```
+
+Let's look what is it
+
+```{r}
+data.frame(Test=names(Test),Train=names(Train))
+```
+
+and visualize
+
+```{r}
+qplot(Train$total_accel_belt,Train$classe)
+```
+
+Let's drop useless for prediction information, classe variable I will return later
+
+```{r}
+Train2<-Train[,-c(1:7,160)]
+Test2<-Test[,-c(1:7,160)]
+```
+
+Transform classes to numeric, cause it is rather strange to see obviously numeric variables in classes form
+
+```{r, echo=FALSE}
+for (i in names(Train2)){
+  if (is.numeric(Train2[,i])==TRUE) {next}
+  else{
+  Train2[,i]<-as.numeric(Train2[,i])}
+}
+
+for (i in names(Test2)){
+  if (is.numeric(Test2[,i])==TRUE) {next}
+  else{
+    Test2[,i]<-as.numeric(Test2[,i])}
+}
+```
+
+Looking for NA in test df (it's important for further prediction)
+
+```{r}
+x<-0
+i<-1
+for (i in c(1:152))
+{
+  if(is.na(Test2[1,i])==TRUE) {x[i]<-i;}
+}
+x<-x[!is.na(x)]
+x<-x[-1]
+x
+```
+
+clear Test&Train form useless for prediction NA variables
+
+```{r}
+Test3<-Test2[,-x]
+Train3<-Train2[,-x]
+```
+I returned classe as I promised and divided selection for model estimating
+
+```{r}
+Train3<-mutate(Train3,classe=Train$classe)
+```
+```{r}
+inTrain <- createDataPartition(y=Train3$classe, p=0.75, list=FALSE)
+training <- Train3[inTrain,]
+testing <- Train3[-inTrain,]
+```
+
+
+let's create train control function with default options (bootstrapping, p=0.75)
+
+```{r}
+tc<-trainControl()
+```
+
+Ctrl-enter and go to drink tea with cookies for 1 hour :)
+
+```{r}
+modFit1<-train(classe~.,method="rf",data=training,trControl=tc)
+
+```
+```{r}
+modFit2<-train(classe~.,method="gbm",data=training,trControl=tc)
+```
+
+
+**Accuracy RF**
+```{r}
+prd1<-predict(modFit1,testing)
+confusionMatrix(prd1,testing$classe)
+```
+**Accuracy boosting**
+```{r}
+prd2<-predict(modFit2,testing)
+confusionMatrix(prd2,testing$classe)
+
+```
+
+We can get conclusion that rm model has better accuracy on current data set. Use it and get final result
+
+```{r}
+predict(modFit1,Test3)
+
+```
+
+
+Thank you for attention!
+
